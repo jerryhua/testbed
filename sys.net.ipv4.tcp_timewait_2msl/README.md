@@ -5,6 +5,7 @@ This module provide a method to change the duration of tcp TIMEWAIT state. But i
 Noted: It was not test when tcp_tw_recycle is set simultaneously.
 
 Useage:
+
 	make
 
 	insmod tcp_tw.ko
@@ -17,6 +18,7 @@ The tcp_timewait_2msl will reset to system default value when module exit.
 
 
 CONTACT
+
  Email: huaguibin@gmail.com
 
 If you have any questions, please email me. 
