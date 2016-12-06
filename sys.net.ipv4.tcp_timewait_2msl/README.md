@@ -6,8 +6,18 @@ Noted: It was not test when tcp_tw_recycle is set simultaneously.
 
 Useage:
 	make
+
 	insmod tcp_tw.ko
+
 	cat /proc/sys/net/ipv4/tcp_timewait_2msl
+
 	echo 30 > /proc/sys/net/ipv4/tcp_timewait_2msl 
 
 The tcp_timewait_2msl will reset to system default value when module exit.
+
+
+CONTACT
+ Email: huaguibin@gmail.com
+
+If you have any questions, please email me. 
+
