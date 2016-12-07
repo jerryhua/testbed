@@ -6,7 +6,7 @@ This module provide a method to change the duration of tcp TIMEWAIT state. But i
 Noted: 
 It was not test when tcp_tw_recycle is set simultaneously.
 
-It work on kernel version 2.6.32-431 at present. It was not test on other version yet.
+It works well on kernel version 2.6.32-431 and not test on other kernel versions yet.
 
 Useage:
 
