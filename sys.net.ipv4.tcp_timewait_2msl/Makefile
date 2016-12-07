@@ -15,7 +15,7 @@ default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) $(MODFLAGS) modules 
 endif 
 clean: 
-	rm -f *.ko *.mod.c *.mod.o *.o *.ko.unsigned .*.cmd 
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
 
 
 
