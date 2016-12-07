@@ -18,6 +18,8 @@ Useage:
 
 	echo 30 > /proc/sys/net/ipv4/tcp_timewait_2msl 
 
+It means set length of tcp time_wait as 30 seconds.
+
 The tcp_timewait_2msl will reset to system default value when module exit.
 
 
