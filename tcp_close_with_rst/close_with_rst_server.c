@@ -118,7 +118,7 @@ int main(int argc, char ** argv)
         printf("send %d Bytes packet to host %s:%d\n", buflen, inet_ntoa(peer_addr.sin_addr), ntohs(peer_addr.sin_port));
     	ret = send(sockfd, buff, buflen, 0);
 
-        close(sockfd);
+//        close(sockfd);
     }
 
     return 0;

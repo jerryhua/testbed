@@ -168,6 +168,9 @@ static void tw_exit(void)
 	twdr->tw_timer.function = inet_twdr_hangman_old;
 	spin_unlock(&twdr->death_lock);
 	
+	del_timer_sync(&tcp_death_row_tw.tw_timer);
+	cancel_work_sync(&tcp_death_row_tw.twkill_work);
+
 	return;
 }
 
