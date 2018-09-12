@@ -3,7 +3,8 @@ CURRENT := $(shell uname -r)
 WARN_OPTS := -Wall -Werror -Wno-strict-prototypes
 
 ifneq ($(KERNELRELEASE),) 
-obj-m :=  test_lock.o
+obj-m :=  test_hook.o
+#obj-m :=  test_lock.o
 else  
 KERNELDIR := /lib/modules/$(CURRENT)/build
 
