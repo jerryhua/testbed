@@ -1,1 +1,0 @@
-cmd_/home/jerry/git/testbed/modules/test_lock.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /home/jerry/git/testbed/modules/test_lock.ko /home/jerry/git/testbed/modules/test_lock.o /home/jerry/git/testbed/modules/test_lock.mod.o

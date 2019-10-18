@@ -27,11 +27,11 @@ int ps(void)
 
 	for_each_process(p)
 	{
-	    if (p->pid == 10691 || p->pid == 10692 || p->pid == 10721)
-    	{	
-    	    printk("%s[%d]\n", p->comm, p->pid);
-            
-        }
+		if (p->pid == 4653 || p->pid == 4654 || p->pid == 4655)
+	    	{	
+			printk("%s[%d]\n", p->comm, p->pid);
+			kthread_stop(p);		
+	        }
 	}
 	return 0;
 }
