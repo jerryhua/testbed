@@ -9,7 +9,7 @@
 #include <linux/rtnetlink.h>   //rntl_lock()
 #include <net/net_namespace.h>  //struct net init_net
 #include <linux/cpumask.h>
-#include <asm-generic/atomic64.h>
+//#include <asm-generic/atomic64.h>
 #include <linux/sched.h>    //wake_up_process()
 #include <linux/kthread.h>  //kthread_create(),kthread_run()
 #include <linux/err.h>      //IS_ERR(),PTR_ERR()
@@ -27,7 +27,7 @@ void thread_fun(void *data)
 
 	while (!kthread_should_stop())
 	{
-		atomic64_add(g_test);
+		atomic64_inc(&g_test);
 		schedule();
 	}
 }

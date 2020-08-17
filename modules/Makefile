@@ -3,7 +3,7 @@ CURRENT := $(shell uname -r)
 WARN_OPTS := -Wall -Werror -Wno-strict-prototypes
 
 ifneq ($(KERNELRELEASE),) 
-obj-m :=  test_concur.o test_process.o
+obj-m :=  test_concur.o test_process.o test_softlockup.o test_hook.o test_lock_multicore.o
 #obj-m :=  test_tasklet.o
 #obj-m :=  test_lock.o
 else  

@@ -13,20 +13,25 @@
 #include <linux/hardirq.h>
 #include <net/icmp.h>
 
+/* Hook position adjust. */
+static int rxhook_pos = NF_INET_LOCAL_IN;
+module_param(rxhook_pos , int, 0444);
+
+static int txhook_pos = NF_INET_LOCAL_OUT;
+module_param(txhook_pos , int, 0444);
 
 /* for hook pri adjust. */
-int hook_pri  =  NF_IP_PRI_FIRST ;
-module_param(hook_pri , int, 0444);
+int rxhook_pri  =  NF_IP_PRI_LAST;
+module_param(rxhook_pri , int, 0444);
 
-/* for hook pri adjust. */
-int hook_num  =  NF_INET_PRE_ROUTING ;
-module_param(hook_num , int, 0444);
+int txhook_pri  =  NF_IP_PRI_LAST - 2;
+module_param(txhook_pri , int, 0444);
 
 struct timer_list g_timer; 
 rwlock_t g_lock;
 
 static unsigned int
-test_hook_func(
+tx_hook(
     unsigned int hook, 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 23) 
     struct sk_buff *Pskb, 
@@ -35,7 +40,7 @@ test_hook_func(
 #endif
     const struct net_device *in,
     const struct net_device *out,
-    int (*okfn)(struct sk_buff *)
+    int (*okfn)(struct sock *, struct sk_buff *)
     )
 {
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 23) 
@@ -52,64 +57,18 @@ test_hook_func(
 
     iph = ip_hdr(skb);
     eth = eth_hdr(skb);
-	tcph = tcp_hdr(skb);
 
     if (!eth || !iph)
         goto skb_accept;
 
-//	if (skb->dev && strncmp((const char *)skb->dev->name, "eth1", strlen("eth1")))
-	if (in && strncmp((const char *)in->name, "eth1", strlen("eth1")))
-	{
-	    write_lock_bh(&g_lock);
-		printk("[APPEXHOOK]:receive one packet[hookspri=%d]\n", hook_pri);
-		printk("protocol = %u ,okfn=%p\n", skb->protocol, okfn); 
-//		dump_stack();
-		printk("\n");
-        mdelay(1000);
-	    write_unlock_bh(&g_lock);
-	}
-//	if (iph->protocol == IPPROTO_ICMP) {
-//		printk("[APXHOOK]: skb=%p,hooknum=%d\n", skb, );
-//		icmp_send(skb, ICMP_DEST_UNREACH, ICMP_FRAG_NEEDED, 1000);    
-//	}
-	
-
-skb_accept:
-    return NF_ACCEPT;
-}
-
-static unsigned int
-test_hook_func1(
-    unsigned int hook, 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 23) 
-    struct sk_buff *Pskb, 
-#else
-    struct sk_buff **Pskb, 
-#endif
-    const struct net_device *in,
-    const struct net_device *out,
-    int (*okfn)(struct sk_buff *)
-    )
-{
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 23) 
-    struct sk_buff *skb = Pskb;
-#else
-    struct sk_buff *skb = *Pskb;
-#endif
-    struct iphdr *iph;
-    struct ethhdr *eth;
-
-    if (!skb)
-        goto skb_accept;
-
-    iph = ip_hdr(skb);
-    eth = eth_hdr(skb);
-
-    if (!eth || !iph)
-        goto skb_accept;
-
-	if (iph->protocol == IPPROTO_ICMP) {
-		printk("[APXHOOK]: skb=%p,hookpri=%d\n", skb, NF_IP_PRI_NAT_DST - 1);
+	if (iph->protocol == IPPROTO_TCP) {
+        tcph = (struct tcphdr*)((char*)iph + (iph->ihl << 2));
+        if (ntohs(tcph->source) == 80 || ntohs(tcph->dest) == 80){
+    		printk("[%s]:{%pI4:%d -> %pI4:%d} syn=%d,"
+                "hookpri=%d,nfctinfo=%d\n", 
+                __FUNCTION__, &iph->saddr, ntohs(tcph->source), &iph->daddr, ntohs(tcph->dest), tcph->syn,
+                txhook_pri, skb->nfctinfo);
+        }
 	}	
 
 skb_accept:
@@ -117,7 +76,7 @@ skb_accept:
 }
 
 static unsigned int
-test_hook_func2(
+rx_hook(
     unsigned int hook, 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 23) 
     struct sk_buff *Pskb, 
@@ -126,7 +85,7 @@ test_hook_func2(
 #endif
     const struct net_device *in,
     const struct net_device *out,
-    int (*okfn)(struct sk_buff *)
+    int (*okfn)(struct sock *, struct sk_buff *)
     )
 {
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 23) 
@@ -136,6 +95,7 @@ test_hook_func2(
 #endif
     struct iphdr *iph;
     struct ethhdr *eth;
+    struct tcphdr *tcph;
 
     if (!skb)
         goto skb_accept;
@@ -146,54 +106,43 @@ test_hook_func2(
     if (!eth || !iph)
         goto skb_accept;
 
-	if (iph->protocol == IPPROTO_ICMP) {
-		printk("[APXHOOK]: skb=%p,hookpri=%d\n", skb, NF_IP_PRI_NAT_DST + 1);
-	}
-	
+	if (iph->protocol == IPPROTO_TCP) {
+        tcph = (struct tcphdr*)((char*)iph + (iph->ihl << 2));
+        if (ntohs(tcph->source) == 80 || ntohs(tcph->dest) == 80){
+    		printk("[%s]:{%pI4:%d -> %pI4:%d} syn=%d,"
+                "hookpri=%d,nfctinfo=%d,okfn=%p, nf_bridge=%p, skb->dev=%p, dev=%s"
+                "skb->pkt_type=%d\n", 
+                __FUNCTION__, &iph->saddr, ntohs(tcph->source), &iph->daddr, ntohs(tcph->dest), tcph->syn,
+                rxhook_pri, skb->nfctinfo, okfn, skb->nf_bridge,skb->dev, skb->dev?skb->dev->name:"", 
+                skb->pkt_type);
+            
+        }
+	}	
+
 skb_accept:
+//    okfn(skb);
+//    return NF_STOLEN;
     return NF_ACCEPT;
 }
 
-
-#if 0
-int test()
-{
-	int a[128];
-
-	prefetch(a);
-	return 0;
-}
-#endif
 static struct nf_hook_ops testhook[] = {
 	{
-	    .hook       = test_hook_func,
-	    .owner      = THIS_MODULE,
-	    .pf         = PF_INET,
-	    //.hooknum    = NF_INET_POST_ROUTING,
-	    .hooknum    = NF_INET_PRE_ROUTING,
-	    .priority   = NF_IP_PRI_FIRST
+		.hook		= rx_hook,
+		.owner		= THIS_MODULE,
+		.pf 		= PF_INET,
+		.hooknum	= NF_INET_PRE_ROUTING,
+		.priority	= NF_IP_PRI_FIRST
+	},
+	{
+		.hook		= tx_hook,
+		.owner		= THIS_MODULE,
+		.pf 		= PF_INET,
+		.hooknum	= NF_INET_LOCAL_OUT,
+		.priority	= NF_IP_PRI_LAST - 1
 	}
-#if(0)
-	{
-		.hook		= test_hook_func1,
-		.owner		= THIS_MODULE,
-		.pf 		= PF_INET,
-		//.hooknum	  = NF_INET_POST_ROUTING,
-		.hooknum	= NF_INET_PRE_ROUTING,
-		.priority	= NF_IP_PRI_NAT_DST - 1
-	},
-	{
-		.hook		= test_hook_func2,
-		.owner		= THIS_MODULE,
-		.pf 		= PF_INET,
-		//.hooknum	  = NF_INET_POST_ROUTING,
-		.hooknum	= NF_INET_PRE_ROUTING,
-		.priority	= NF_IP_PRI_NAT_DST + 1
-	},
-#endif
-
 };
 
+#if 0
 static void timer_fn(unsigned long Data)
 {
 	struct timeval tv;
@@ -210,17 +159,23 @@ static void timer_fn(unsigned long Data)
 	write_unlock_bh(&g_lock);
     return;
 }
-
+#endif
 static int hg_init(void)
 {
+    testhook[0].hooknum = rxhook_pos;
+    testhook[0].priority = rxhook_pri;
+    
+    testhook[1].hooknum = txhook_pos;
+    testhook[1].priority = txhook_pri;
+    
    nf_register_hooks(testhook, ARRAY_SIZE(testhook));
-    rwlock_init(&g_lock);
-	init_timer(&g_timer);
+//    rwlock_init(&g_lock);
+//	init_timer(&g_timer);
 
 	/* init timer */
-	g_timer.function	= timer_fn;
-	g_timer.data		= 0;
-	mod_timer(&g_timer, jiffies + HZ * 1);
+//	g_timer.function	= timer_fn;
+//	g_timer.data		= 0;
+//	mod_timer(&g_timer, jiffies + HZ * 1);
     
 	return 0;
 }
@@ -229,7 +184,7 @@ static void hg_exit(void)
 {
 	printk(KERN_ALERT"appex hello-world modules exit\n");
 
-    del_timer(&g_timer);
+//    del_timer(&g_timer);
 	nf_unregister_hooks(testhook, ARRAY_SIZE(testhook));
 
     return;
